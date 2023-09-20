@@ -64,11 +64,11 @@ ana.x.config_groups = {}
 # ttbar and single top MCs, plus single muon data
 # update this config or add additional ones to accomodate the needs of your analysis
 
-from cmsdb.campaigns.run2_2017_nano_v9 import campaign_run2_2017_nano_v9
+from cmsdb.campaigns.run2_2018_nano_v11 import campaign_run2_2018_nano_v11
 
 # copy the campaign
 # (creates copies of all linked datasets, processes, etc. to allow for encapsulated customization)
-campaign = campaign_run2_2017_nano_v9.copy()
+campaign = campaign_run2_2018_nano_v11.copy()
 
 # get all root processes
 procs = get_root_processes_from_campaign(campaign)
@@ -81,9 +81,8 @@ year = campaign.x.year
 
 # add processes we are interested in
 process_names = [
-    "data",
-    "tt",
-    "st",
+    "data_mu",
+    "h_ggf_4l"
 ]
 for process_name in process_names:
     # add the process
@@ -96,11 +95,10 @@ for process_name in process_names:
 # add datasets we need to study
 dataset_names = [
     # data
-    "data_mu_b",
+    "data_mu_a",
     # backgrounds
-    "tt_sl_powheg",
     # signals
-    "st_tchannel_t_powheg",
+    "h_ggf_4l_powheg",
 ]
 for dataset_name in dataset_names:
     # add the dataset
@@ -201,7 +199,7 @@ json_mirror = "/afs/cern.ch/user/m/mrieger/public/mirrors/jsonpog-integration-84
 cfg.x.external_files = DotDict.wrap({
     # lumi files
     "lumi": {
-        "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/Legacy_2017/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
+        "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt", "v1"),  # noqa
         "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
     },
 
@@ -304,6 +302,13 @@ cfg.add_variable(
     binning=(40, 0.0, 400.0),
     unit="GeV",
     x_title=r"$p_{T} of all jets$",
+)
+cfg.add_variable(
+    name="muon_pt",
+    expression="Muon.pt",
+    binning=(40, 0.0, 400.0),
+    unit="GeV",
+    x_title=r"$p_{T} of all \mu$",
 )
 cfg.add_variable(
     name="jet1_pt",
