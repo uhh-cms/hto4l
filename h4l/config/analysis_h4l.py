@@ -64,11 +64,13 @@ ana.x.config_groups = {}
 # ttbar and single top MCs, plus single muon data
 # update this config or add additional ones to accomodate the needs of your analysis
 
-from cmsdb.campaigns.run2_2018_nano_v11 import campaign_run2_2018_nano_v11
+from cmsdb.campaigns.run2_2018_nano_v9 import campaign_run2_2018_nano_v9
 
 # copy the campaign
 # (creates copies of all linked datasets, processes, etc. to allow for encapsulated customization)
-campaign = campaign_run2_2018_nano_v11.copy()
+campaign = campaign_run2_2018_nano_v9.copy()
+
+
 
 # get all root processes
 procs = get_root_processes_from_campaign(campaign)
@@ -78,6 +80,9 @@ cfg = ana.add_config(campaign)
 
 # gather campaign data
 year = campaign.x.year
+
+corr_postfix = f"{campaign.x.vfp}VFP" if year == 2016 else ""
+
 
 # add processes we are interested in
 process_names = [
@@ -194,18 +199,101 @@ cfg.add_shift(name="mu_up", id=10, type="shape")
 cfg.add_shift(name="mu_down", id=11, type="shape")
 add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
 
-# external files
-json_mirror = "/afs/cern.ch/user/m/mrieger/public/mirrors/jsonpog-integration-849c6a6e"
-cfg.x.external_files = DotDict.wrap({
-    # lumi files
-    "lumi": {
-        "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt", "v1"),  # noqa
-        "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+cfg.add_shift(name="murmuf_up", id=140, type="shape")
+cfg.add_shift(name="murmuf_down", id=141, type="shape")
+add_shift_aliases(
+    cfg,
+    "murmuf",
+    {
+        "murmuf_weight": "murmuf_weight_{direction}",
+        "normalized_murmuf_weight": "normalized_murmuf_weight_{direction}",
     },
+)
+
+# external files
+json_mirror = "/afs/cern.ch/user/m/mrieger/public/mirrors/jsonpog-integration-dfd90038"
+cfg.x.external_files = DotDict.wrap({
+    # jet energy correction
+    "jet_jerc": (f"{json_mirror}/POG/JME/{year}{corr_postfix}_UL/jet_jerc.json.gz", "v1"),
+
+    # tau energy correction and scale factors
+    "tau_sf": (f"{json_mirror}/POG/TAU/{year}{corr_postfix}_UL/tau.json.gz", "v1"),
+
+    # electron scale factors
+    "electron_sf": (f"{json_mirror}/POG/EGM/{year}{corr_postfix}_UL/electron.json.gz", "v1"),
 
     # muon scale factors
-    "muon_sf": (f"{json_mirror}/POG/MUO/{year}_UL/muon_Z.json.gz", "v1"),
+    "muon_sf": (f"{json_mirror}/POG/MUO/{year}{corr_postfix}_UL/muon_Z.json.gz", "v1"),
+
+    # btag scale factor
+    "btag_sf_corr": (f"{json_mirror}/POG/BTV/{year}{corr_postfix}_UL/btagging.json.gz", "v1"),
+
+    # met phi corrector
+    "met_phi_corr": (f"{json_mirror}/POG/JME/{year}{corr_postfix}_UL/met.json.gz", "v1"),
+
+    # hh-btag repository (lightweight) with TF saved model directories
+    "hh_btag_repo": ("https://github.com/hh-italian-group/HHbtag/archive/1dc426053418e1cab2aec021802faf31ddf3c5cd.tar.gz", "v1"),  # noqa
 })
+
+# external files with more complex year dependence
+if year == 2016:
+    cfg.x.external_files.update(DotDict.wrap({
+        # lumi files
+        "lumi": {
+            "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/Legacy_2016/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt", "v1"),  # noqa
+            "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+        },
+
+        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJSONFileforData?rev=45#Pileup_JSON_Files_For_Run_II
+        "pu": {
+            "json": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/PileUp/pileup_latest.txt", "v1"),  # noqa
+            "mc_profile": ("https://raw.githubusercontent.com/cms-sw/cmssw/a65c2e1a23f2e7fe036237e2e34cda8af06b8182/SimGeneral/MixingModule/python/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.py", "v1"),  # noqa
+            "data_profile": {
+                "nominal": (f"/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2016-{campaign.x.vfp}VFP-69200ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_up": (f"/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2016-{campaign.x.vfp}VFP-72400ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_down": (f"/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2016-{campaign.x.vfp}VFP-66000ub-99bins.root", "v1"),  # noqa
+            },
+        },
+    }))
+elif year == 2017:
+    cfg.x.external_files.update(DotDict.wrap({
+        # lumi files
+        "lumi": {
+            "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/Legacy_2017/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
+            "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+        },
+
+        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJSONFileforData?rev=45#Pileup_JSON_Files_For_Run_II
+        "pu": {
+            "json": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/PileUp/UltraLegacy/pileup_latest.txt", "v1"),  # noqa
+            "mc_profile": ("https://raw.githubusercontent.com/cms-sw/cmssw/435f0b04c0e318c1036a6b95eb169181bbbe8344/SimGeneral/MixingModule/python/mix_2017_25ns_UltraLegacy_PoissonOOTPU_cfi.py", "v1"),  # noqa
+            "data_profile": {
+                "nominal": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2017-69200ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_up": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2017-72400ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_down": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2017-66000ub-99bins.root", "v1"),  # noqa
+            },
+        },
+    }))
+else:  # year 2018
+    cfg.x.external_files.update(DotDict.wrap({
+        # lumi files
+        "lumi": {
+            "golden": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt", "v1"),  # noqa
+            "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+        },
+
+        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJSONFileforData?rev=45#Pileup_JSON_Files_For_Run_II
+        "pu": {
+            "json": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/PileUp/UltraLegacy/pileup_latest.txt", "v1"),  # noqa
+            "mc_profile": ("https://raw.githubusercontent.com/cms-sw/cmssw/a65c2e1a23f2e7fe036237e2e34cda8af06b8182/SimGeneral/MixingModule/python/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.py", "v1"),  # noqa
+            "data_profile": {
+                "nominal": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2018-69200ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_up": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2018-72400ub-99bins.root", "v1"),  # noqa
+                "minbias_xs_down": ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/PileUp/UltraLegacy/PileupHistogram-goldenJSON-13tev-2018-66000ub-99bins.root", "v1"),  # noqa
+            },
+        },
+    }))
+
 
 # target file size after MergeReducedEvents in MB
 cfg.x.reduced_file_size = 512.0
@@ -216,12 +304,22 @@ cfg.x.keep_columns = DotDict.wrap({
         # general event info
         "run", "luminosityBlock", "event",
         # object info
-        "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.btagDeepFlavB", "Jet.hadronFlavour",
-        "Muon.pt", "Muon.eta", "Muon.phi", "Muon.mass", "Muon.pfRelIso04_all",
+        "Jet.btagDeepFlavB", "Jet.hadronFlavour",
+        "Muon.pfRelIso04_all", "Muon.charge",
+        "Electron.deltaEtaSC", "Electron.charge",
+        "Electron.mvaFall17V2Iso", "Electron.mvaHZZIso",
         "MET.pt", "MET.phi", "MET.significance", "MET.covXX", "MET.covXY", "MET.covYY",
         "PV.npvs",
         # columns added during selection
         "deterministic_seed", "process_id", "mc_weight", "cutflow.*",
+        "channel_id", "category_ids", "mc_weight", "pdf_weight*", "murmuf_weight*",
+            "leptons_os", "single_triggered", "cross_triggered",
+        "pu_weight*",
+    } | {
+        # four momenta information
+        f"{field}.{var}"
+        for field in ["Jet", "Muon", "Electron"]
+        for var in ["pt", "eta", "phi", "mass", "e"]
     },
     "cf.MergeSelectionMasks": {
         "normalization_weight", "process_id", "category_ids", "cutflow.*",
@@ -230,6 +328,16 @@ cfg.x.keep_columns = DotDict.wrap({
         "*",
     },
 })
+
+
+# names of electron correction sets and working points
+# (used in the electron_sf producer)
+cfg.x.electron_sf_names = ("UL-Electron-ID-SF", f"{year}{corr_postfix}", "wp80iso")
+
+# names of muon correction sets and working points
+# (used in the muon producer)
+cfg.x.muon_sf_names = ("NUM_TightRelIso_DEN_TightIDandIPCut", f"{year}{corr_postfix}_UL")
+
 
 # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
 get_shifts = functools.partial(get_shifts_from_sources, cfg)
@@ -250,6 +358,7 @@ cfg.x.versions = {
 # (just one for now)
 cfg.add_channel(name="mutau", id=1)
 
+
 # add categories using the "add_category" tool which adds auto-generated ids
 # the "selection" entries refer to names of selectors, e.g. in selection/example.py
 add_category(
@@ -265,85 +374,4 @@ add_category(
     label="2 jets",
 )
 
-# add variables
-# (the "event", "run" and "lumi" variables are required for some cutflow plotting task,
-# and also correspond to the minimal set of columns that coffea's nano scheme requires)
-cfg.add_variable(
-    name="event",
-    expression="event",
-    binning=(1, 0.0, 1.0e9),
-    x_title="Event number",
-    discrete_x=True,
-)
-cfg.add_variable(
-    name="run",
-    expression="run",
-    binning=(1, 100000.0, 500000.0),
-    x_title="Run number",
-    discrete_x=True,
-)
-cfg.add_variable(
-    name="lumi",
-    expression="luminosityBlock",
-    binning=(1, 0.0, 5000.0),
-    x_title="Luminosity block",
-    discrete_x=True,
-)
-cfg.add_variable(
-    name="n_jet",
-    expression="n_jet",
-    binning=(11, -0.5, 10.5),
-    x_title="Number of jets",
-    discrete_x=True,
-)
-cfg.add_variable(
-    name="jets_pt",
-    expression="Jet.pt",
-    binning=(40, 0.0, 400.0),
-    unit="GeV",
-    x_title=r"$p_{T} of all jets$",
-)
-cfg.add_variable(
-    name="muon_pt",
-    expression="Muon.pt",
-    binning=(40, 0.0, 400.0),
-    unit="GeV",
-    x_title=r"$p_{T} of all \mu$",
-)
-cfg.add_variable(
-    name="jet1_pt",
-    expression="Jet.pt[:,0]",
-    null_value=EMPTY_FLOAT,
-    binning=(40, 0.0, 400.0),
-    unit="GeV",
-    x_title=r"Jet 1 $p_{T}$",
-)
-cfg.add_variable(
-    name="jet1_eta",
-    expression="Jet.eta[:,0]",
-    null_value=EMPTY_FLOAT,
-    binning=(30, -3.0, 3.0),
-    x_title=r"Jet 1 $\eta$",
-)
-cfg.add_variable(
-    name="ht",
-    expression=lambda events: ak.sum(events.Jet.pt, axis=1),
-    binning=(40, 0.0, 800.0),
-    unit="GeV",
-    x_title="HT",
-)
-# weights
-cfg.add_variable(
-    name="mc_weight",
-    expression="mc_weight",
-    binning=(200, -10, 10),
-    x_title="MC weight",
-)
-# cutflow variables
-cfg.add_variable(
-    name="cf_jet1_pt",
-    expression="cutflow.jet1_pt",
-    binning=(40, 0.0, 400.0),
-    unit="GeV",
-    x_title=r"Jet 1 $p_{T}$",
-)
+from h4l.config import variables
