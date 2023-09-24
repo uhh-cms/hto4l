@@ -65,14 +65,9 @@ def electron_selection(
         (abs(events.Electron.sip3d) < 4) & True
         # return_cuts()
     )
-    electron_idx = ak.local_index(events.Electron.pt, axis=1)
-    selected_electron_idx = electron_idx[default_mask]
-    # sort for pt
-    selected_electron_idx = ak.argsort(
-        events.Electron[selected_electron_idx].pt,
-        axis=1,
-        ascending=False
-    )
+    sorted_idx = ak.argsort(events.Electron.pt, axis=1, ascending=False)
+    # filter unselected electron indices
+    selected_electron_idx = sorted_idx[default_mask[sorted_idx]]
     
 
 
@@ -85,18 +80,43 @@ def electron_selection(
     )
 
 @selector(
-    uses={f"Muon.{var}" for var in ["pt", "eta", "phi", "mass"]},
+    uses=({
+        f"Muon.{var}" for var in [
+            # four momenta information
+            "pt", "eta", "phi", "mass", 
+            # quality criteria
+            "isGlobal", "isStandalone", "isTracker", "nStations", "nTrackerLayers",
+            # impact parameters
+            "dxy", "dz", "sip3d",
+            # IDs
+            "tightId", "mvaId", "highPtId",
+            #isolation
+            "pfRelIso03_all",
+        ]}
+    ),
     exposed=False,
 )
 def muon_selector(self: Selector, events: ak.Array, **kwargs) -> tuple[ak.Array, SelectionResult]:
-    min_pt = 20
+    min_pt = 15
     max_eta = 2.4
-    sorted_muons = ak.argsort(events.Muon.pt, axis=1, ascending=False)
     selected_muon_mask = (
-        (events.Muon.pt[sorted_muons] > min_pt) & 
-        (abs(events.Muon.eta[sorted_muons]) < max_eta)
+        # Global or Tracker Muon
+        (events.Muon.isGlobal | events.Muon.isTracker) &
+        # Discard Standalone Muon tracks if reconstructed in muon system only
+        (~events.Muon.isStandalone | (events.Muon.nTrackerLayers >0)) &
+        # WIP: Discard muons with muonBestTrackType==2 even if they are global or tracker muons
+        # --> muonBestTrackType not available?
+        (events.Muon.pt > min_pt) & 
+        (abs(events.Muon.eta) < max_eta) &
+        (events.Muon.dxy < 0.5) & (events.Muon.dz < 1.0) &
+        (abs(events.Muon.sip3d) < 4) &
+        # PF muon ID if pT < 200 GeV, PF muon ID or High-pT muon ID if pT > 200 GeV
+        (((events.Muon.pt > 200) & events.Muon.highPtId == 2) | (events.Muon.tightId)) &
+        (events.Muon.pfRelIso03_all < 0.35)
     )
-    muon_idx = sorted_muons[selected_muon_mask]
+    sorted_idx = ak.argsort(events.Muon.pt, axis=1, ascending=False)
+    # filter unselected muon indices
+    muon_idx = sorted_idx[selected_muon_mask[sorted_idx]]
     return events, SelectionResult(
         objects= {
             "Muon": {

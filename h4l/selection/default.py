@@ -69,11 +69,12 @@ def default(
 
     ele_idx = results.objects.Electron.Electron
     muon_idx = results.objects.Muon.Muon
+
     n_ele = ak.num(events.Electron[ele_idx], axis=1)
     n_muon = ak.num(events.Muon[muon_idx], axis=1)
     results.steps["four_leptons"] = (n_ele + n_muon) >= 4
     event_sel = reduce(and_, results.steps.values())
-
+    results.main["event"] = event_sel
     events = self[process_ids](events, **kwargs)
 
 
