@@ -114,7 +114,7 @@ def electron_selection(
             # impact parameters
             "dxy", "dz", "sip3d",
             # IDs
-            "tightId", "mvaId", "highPtId",
+            "tightId", "mvaId", "highPtId", "isPFcand",
             # isolation
             "pfRelIso03_all",
         ]}
@@ -130,7 +130,7 @@ def muon_selector(
     max_eta = 2.4
     selected_muon_mask = (
         # Global or Tracker Muon
-        (events.Muon.isGlobal | events.Muon.isTracker) &
+        (events.Muon.isGlobal or (events.Muon.isTracker & events.Muon.nStations > 0)) &
         # Discard Standalone Muon tracks if reconstructed in muon system only
         (~events.Muon.isStandalone | (events.Muon.nTrackerLayers > 0)) &
         # WIP: Discard muons with muonBestTrackType==2 even if they are global or tracker muons # noqa
@@ -140,7 +140,7 @@ def muon_selector(
         (events.Muon.dxy < 0.5) & (events.Muon.dz < 1.0) &
         (abs(events.Muon.sip3d) < 4) &
         # PF muon ID if pT < 200 GeV, PF muon ID or High-pT muon ID if pT > 200 GeV
-        (((events.Muon.pt > 200) & events.Muon.highPtId == 2) | (events.Muon.tightId)) &
+        (((events.Muon.pt > 200) & events.Muon.highPtId > 0) | (events.Muon.isPFcand)) &
         (events.Muon.pfRelIso03_all < 0.35)
     )
     sorted_idx = ak.argsort(events.Muon.pt, axis=1, ascending=False)
