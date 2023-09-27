@@ -62,8 +62,8 @@ def electron_selection(
         (abs(events.Electron.eta) < 2.5) & 
         (events.Electron.dxy < 0.5) &
         (events.Electron.dz < 1.0) & 
-        (abs(events.Electron.sip3d) < 4) & True
-        # return_cuts()
+        (abs(events.Electron.sip3d) < 4) & 
+        return_cuts()
     )
     sorted_idx = ak.argsort(events.Electron.pt, axis=1, ascending=False)
     # filter unselected electron indices
