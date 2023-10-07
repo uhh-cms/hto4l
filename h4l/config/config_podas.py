@@ -67,9 +67,9 @@ def add_podas_config(
     verify_config_processes(cfg, warn=True)
 
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
-    cfg.x.default_calibrator = "example"
-    cfg.x.default_selector = "example"
-    cfg.x.default_producer = "example"
+    cfg.x.default_calibrator = "default"
+    cfg.x.default_selector = "default"
+    cfg.x.default_producer = "default"
     cfg.x.default_ml_model = None
     cfg.x.default_inference_model = "example"
     cfg.x.default_categories = ("incl",)
@@ -148,6 +148,10 @@ def add_podas_config(
     cfg.add_shift(name="mu_up", id=10, type="shape")
     cfg.add_shift(name="mu_down", id=11, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
+
+    cfg.add_shift(name="ele_up", id=12, type="shape")
+    cfg.add_shift(name="ele_down", id=13, type="shape")
+    add_shift_aliases(cfg, "ele", {"electron_weight": "electron_weight_{direction}"})
 
     cfg.add_shift(name="murmuf_up", id=140, type="shape")
     cfg.add_shift(name="murmuf_down", id=141, type="shape")
@@ -244,7 +248,6 @@ def add_podas_config(
             },
         }))
 
-
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
 
@@ -258,12 +261,13 @@ def add_podas_config(
             "Muon.pfRelIso04_all", "Muon.charge",
             "Electron.deltaEtaSC", "Electron.charge",
             "Electron.mvaFall17V2Iso", "Electron.mvaHZZIso",
-            "MET.pt", "MET.phi", "MET.significance", "MET.covXX", "MET.covXY", "MET.covYY",
+            "MET.pt", "MET.phi", "MET.significance", "MET.covXX", "MET.covXY",
+            "MET.covYY",
             "PV.npvs",
             # columns added during selection
             "deterministic_seed", "process_id", "mc_weight", "cutflow.*",
             "channel_id", "category_ids", "mc_weight", "pdf_weight*", "murmuf_weight*",
-                "leptons_os", "single_triggered", "cross_triggered",
+            "leptons_os", "single_triggered", "cross_triggered",
             "pu_weight*",
         } | {
             # four momenta information
@@ -279,7 +283,6 @@ def add_podas_config(
         },
     })
 
-
     # names of electron correction sets and working points
     # (used in the electron_sf producer)
     cfg.x.electron_sf_names = ("UL-Electron-ID-SF", f"{year}{corr_postfix}", "wp80iso")
@@ -288,6 +291,10 @@ def add_podas_config(
     # (used in the muon producer)
     cfg.x.muon_sf_names = ("NUM_TightRelIso_DEN_TightIDandIPCut", f"{year}{corr_postfix}_UL")
 
+    # add pt threshold for lepton working points in the H->4l analysis
+    # todo: pt for tight WP defined by threshold for scale factors, to be checked
+    cfg.x.electron_thresholds = DotDict({"pt": {"loose": 7, "tight": 15}})
+    cfg.x.muon_thresholds = DotDict({"pt": {"loose": 5, "tight": 15}})
 
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
@@ -307,7 +314,6 @@ def add_podas_config(
     # channels
     # (just one for now)
     cfg.add_channel(name="4mu", id=1)
-
 
     # add categories using the "add_category" tool which adds auto-generated ids
     # the "selection" entries refer to names of selectors, e.g. in selection/example.py
