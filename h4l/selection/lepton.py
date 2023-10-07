@@ -4,6 +4,8 @@ from __future__ import annotations
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column
 from columnflow.util import DotDict, maybe_import, dev_sandbox
+from columnflow.production.util import attach_coffea_behavior
+
 from h4l.util import IF_NANO_V9, IF_NANO_V10
 
 np = maybe_import("numpy")
@@ -14,11 +16,12 @@ ak = maybe_import("awkward")
     uses=(
         {
             f"Electron.{var}"
-            for var in {"pt", "eta", "deltaEtaSC",
+            for var in {"pt", "eta", "phi", "deltaEtaSC",
                       "dxy", "dz", "sip3d"}
         } | {
             IF_NANO_V9("Electron.mvaFall17V2Iso"),
             IF_NANO_V10("Electron.mvaHZZIso"),
+            attach_coffea_behavior,
         }
     ),
     exposed=False,
@@ -27,9 +30,11 @@ ak = maybe_import("awkward")
 def electron_selection(
     self: Selector,
     events: ak.Array,
+    working_point: str = "tight",
     **kwargs,
 ):
-    min_pt = 15
+    events = self[attach_coffea_behavior](events, collections=["Electron"])
+    min_pt = self.config_inst.x.electron_thresholds.pt[working_point]
     pt = events.Electron.pt
     fSCeta = abs(events.Electron.eta + events.Electron.deltaEtaSC)
 
@@ -44,7 +49,7 @@ def electron_selection(
                 BDT = events.Electron.mvaHZZIso
 
             # pre-UL WP for Run II (miniAOD branch: Run2_CutBased_BTag16)
-            if self.config_inst.campaign.x.preUL:  
+            if self.config_inst.campaign.x.preUL:
                 # print("This is preUL!")
                 # from IPython import embed; embed()
                 return (
@@ -85,12 +90,16 @@ def electron_selection(
         return ak.ones_like(events.Electron.pt)
     default_mask = (
         (pt > min_pt) &
-        (abs(events.Electron.eta) < 2.5) & 
+        (abs(events.Electron.eta) < 2.5) &
         (events.Electron.dxy < 0.5) &
-        (events.Electron.dz < 1.0) & 
-        (abs(events.Electron.sip3d) < 4) & 
-        return_cuts()
+        (events.Electron.dz < 1.0) &
+        (abs(events.Electron.sip3d) < 4)
     )
+
+    # if we don't want electrons at the loose working point, also apply ID criteria
+    if not working_point == "loose":
+        default_mask = default_mask & return_cuts()
+
     sorted_idx = ak.argsort(events.Electron.pt, axis=1, ascending=False)
     # filter unselected electron indices
     selected_electron_idx = sorted_idx[default_mask[sorted_idx]]
@@ -100,6 +109,9 @@ def electron_selection(
             "Electron": {
                 "Electron": selected_electron_idx,
             },
+        },
+        aux={
+            "mask": default_mask,
         },
     )
 
@@ -117,20 +129,22 @@ def electron_selection(
             "tightId", "mvaId", "highPtId", "isPFcand",
             # isolation
             "pfRelIso03_all",
-        ]}
+        ]} | {attach_coffea_behavior}
     ),
     exposed=False,
 )
 def muon_selector(
     self: Selector,
     events: ak.Array,
+    working_point: str = "tight",
     **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
-    min_pt = 15
+    events = self[attach_coffea_behavior](events, collections=["Electron"],)
+    min_pt = self.config_inst.x.muon_thresholds.pt[working_point]
     max_eta = 2.4
     selected_muon_mask = (
         # Global or Tracker Muon
-        (events.Muon.isGlobal or (events.Muon.isTracker & events.Muon.nStations > 0)) &
+        (events.Muon.isGlobal | (events.Muon.isTracker & events.Muon.nStations > 0)) &
         # Discard Standalone Muon tracks if reconstructed in muon system only
         (~events.Muon.isStandalone | (events.Muon.nTrackerLayers > 0)) &
         # WIP: Discard muons with muonBestTrackType==2 even if they are global or tracker muons # noqa
@@ -138,11 +152,17 @@ def muon_selector(
         (events.Muon.pt > min_pt) &
         (abs(events.Muon.eta) < max_eta) &
         (events.Muon.dxy < 0.5) & (events.Muon.dz < 1.0) &
-        (abs(events.Muon.sip3d) < 4) &
-        # PF muon ID if pT < 200 GeV, PF muon ID or High-pT muon ID if pT > 200 GeV
-        (((events.Muon.pt > 200) & events.Muon.highPtId > 0) | (events.Muon.isPFcand)) &
-        (events.Muon.pfRelIso03_all < 0.35)
+        (abs(events.Muon.sip3d) < 4)
     )
+    if not working_point == "loose":
+        # PF muon ID if pT < 200 GeV, PF muon ID or High-pT muon ID if pT > 200 GeV
+        selected_muon_mask = selected_muon_mask & (
+            (
+                ((events.Muon.pt > 200) & events.Muon.highPtId > 0) |
+                (events.Muon.isPFcand)
+            ) &
+            (events.Muon.pfRelIso03_all < 0.35)
+        )
     sorted_idx = ak.argsort(events.Muon.pt, axis=1, ascending=False)
     # filter unselected muon indices
     muon_idx = sorted_idx[selected_muon_mask[sorted_idx]]
@@ -151,5 +171,8 @@ def muon_selector(
             "Muon": {
                 "Muon": muon_idx,
             },
+        },
+        aux={
+            "mask": selected_muon_mask,
         },
     )
