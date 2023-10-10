@@ -308,20 +308,13 @@ def add_podas_config(
     # (just one for now)
     cfg.add_channel(name="4mu", id=1)
 
-
     # add categories using the "add_category" tool which adds auto-generated ids
-    # the "selection" entries refer to names of selectors, e.g. in selection/example.py
+    # the "selection" entries refer to names of categorizers, e.g. in categorization/default.py
     add_category(
         cfg,
         name="incl",
         selection="cat_incl",
         label="inclusive",
-    )
-    add_category(
-        cfg,
-        name="2j",
-        selection="cat_2j",
-        label="2 jets",
     )
 
     from h4l.config.variables import add_variables
