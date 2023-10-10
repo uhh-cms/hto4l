@@ -32,24 +32,106 @@ def add_podas_config(
 
     # add processes we are interested in
     process_names = [
-        "data_mu",
-        "h_ggf_4l",
+        # data
+        "data",
+        # signals
+        "h",
+        "h_ggf_4l",  # GluGluHToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "h_vbf_4l",  # VBF_HToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "wph_4l",  # WplusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "wmh_4l",  # WminusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "zh_4l",  # ZH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2-minlo-HZJ_JHUGenV7011_pythia8
+        "tth_4l",  # ttH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "bbh_4l",  # bbH_HToZZTo4L_M125_TuneCP2_13TeV-jhugenv7011-pythia8
+        "thq_4l",  # tqH_HToZZTo4L_M125_TuneCP5_13TeV-jhugenv7011-pythia8
+        # backgrounds
+        "zz_llll",  # ZZTo4L_TuneCP5_13TeV_powheg_pythia8
+        "ggf",  # GluGluToContinToZZTo*_TuneCP5_13TeV-mcfm701-pythia8
+        # TODO: dy, wz, tt
     ]
+
+    # configuration of colors, labels, etc. can happen here
+    process_styles = {
+        # data
+        "data": {
+            "color1": "#000000",
+            "label": r"Data",
+        },
+        # signals
+        "h": {
+            "color1": "#ff9999",
+            "color2": "#555555",
+            "label": r"H(125)",
+        },
+        # backgrounds
+        "zz_llll": {
+            "color1": "#99ccff",
+            "color2": "#555555",
+            "label": r"$q\overline{q}\rightarrow{ZZ}$, Z$\gamma^{*}$",
+        },
+        "ggf": {
+            "color1": "#4b78ff",
+            "color2": "#555555",
+            "label": r"${gg}\rightarrow{ZZ}$, Z$\gamma^{*}$",
+        },
+        # TODO: dy, wz, tt (color: #669966, label: Z+X)
+    }
+
     for process_name in process_names:
         # add the process
         proc = cfg.add_process(procs.get(process_name))
 
-        # configuration of colors, labels, etc. can happen here
-        if proc.is_mc:
-            proc.color1 = (244, 182, 66) if proc.name == "tt" else (244, 93, 66)
+        # set style of some processes
+        for attr in ("color1", "color2", "label"):
+            val = process_styles.get(proc.name, {}).get(attr, None)
+            if val is not None:
+                setattr(proc, attr, val)
 
     # add datasets we need to study
     dataset_names = [
         # data
-        "data_mu_a",
-        # backgrounds
+        "data_e_b",
+        "data_e_c",
+        "data_e_d",
+        "data_e_e",
+        "data_e_f",
+        "data_double_egamma_b",
+        "data_double_egamma_c",
+        "data_double_egamma_d",
+        "data_double_egamma_e",
+        "data_double_egamma_f",
+        "data_mu_b",
+        "data_mu_c",
+        "data_mu_d",
+        "data_mu_e",
+        "data_mu_f",
+        "data_double_mu_b",
+        "data_double_mu_c",
+        "data_double_mu_d",
+        "data_double_mu_e",
+        "data_double_mu_f",
+        "data_mu_egamma_b",
+        "data_mu_egamma_c",
+        "data_mu_egamma_d",
+        "data_mu_egamma_e",
+        "data_mu_egamma_f",
         # signals
-        "h_ggf_4l_powheg",
+        "h_ggf_4l_powheg",  # GluGluHToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "h_vbf_4l_powheg",  # VBF_HToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "wph_4l_powheg",  # WplusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "wmh_4l_powheg",  # WminusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "zh_4l_powheg",  # ZH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2-minlo-HZJ_JHUGenV7011_pythia8
+        "tth_4l_powheg",  # ttH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "bbh_4l_powheg",  # bbH_HToZZTo4L_M125_TuneCP2_13TeV-jhugenv7011-pythia8
+        "thq_4l_powheg",  # tqH_HToZZTo4L_M125_TuneCP5_13TeV-jhugenv7011-pythia8
+        # backgrounds
+        "zz_llll_powheg",  # ZZTo4L_TuneCP5_13TeV_powheg_pythia8
+        "ggf_4e_mcfm",  # GluGluToContinToZZTo4e_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_4mu_mcfm",  # GluGluToContinToZZTo4mu_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_4tau_mcfm",  # GluGluToContinToZZTo4tau_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2e2mu_mcfm",  # GluGluToContinToZZTo2e2mu_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2e2tau_mcfm",  # GluGluToContinToZZTo2e2tau_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2mu2tau_mcfm",  # GluGluToContinToZZTo2mu2tau_TuneCP5_13TeV-mcfm701-pythia8
     ]
     for dataset_name in dataset_names:
         # add the dataset
