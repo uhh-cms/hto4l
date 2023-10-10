@@ -64,7 +64,7 @@ ana.x.config_groups = {}
 # ttbar and single top MCs, plus single muon data
 # update this config or add additional ones to accomodate the needs of your analysis
 
-from cmsdb.campaigns.run2_2018_nano_v9 import campaign_run2_2018_nano_v9
+from cmsdb.campaigns.run2_2017_nano_v9 import campaign_run2_2017_nano_v9
 
 # copy the campaign
 # (creates copies of all linked datasets, processes, etc. to allow for encapsulated customization)
@@ -72,16 +72,16 @@ from h4l.config.config_podas import add_podas_config
 
 add_podas_config(
     analysis=analysis_h4l,
-    campaign=campaign_run2_2018_nano_v9.copy(),
-    config_name=campaign_run2_2018_nano_v9.name,
+    campaign=campaign_run2_2017_nano_v9.copy(),
+    config_name=campaign_run2_2017_nano_v9.name,
     config_id=1,
 )
 
 # add config for development with limited number of files
 add_podas_config(
     analysis=analysis_h4l,
-    campaign=campaign_run2_2018_nano_v9.copy(),
-    config_name=f"{campaign_run2_2018_nano_v9.name}_limited",
+    campaign=campaign_run2_2017_nano_v9.copy(),
+    config_name=f"{campaign_run2_2017_nano_v9.name}_limited",
     config_id=2,
     limit_dataset_files=2,
 )
