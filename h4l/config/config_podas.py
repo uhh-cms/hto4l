@@ -30,6 +30,46 @@ def add_podas_config(
 
     corr_postfix = f"{campaign.x.vfp}VFP" if year == 2016 else ""
 
+    # triggers required, sorted by primary dataset tag for recorded data
+    cfg.x.trigger_matrix = [
+        (
+            "DoubleEG", {
+                "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL",
+                "DoubleEle25_CaloIdL_MW",
+            },
+        ),
+        (
+            "DoubleMuon", {
+                "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8",
+            },
+        ),
+        (
+            "MuonEG", {
+                "Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL",
+                "Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                "Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                "DiMu9_Ele9_CaloIdL_TrackIdL_DZ",
+            },
+        ),
+        (
+            "SingleElectron", {
+                "Ele32_WPTight_Gsf",
+            },
+        ),
+        (
+            "SingleMuon", {
+                "IsoMu24",
+            },
+        ),
+    ]
+
+    # union of all triggers for use in MC
+    cfg.x.all_triggers = {
+        trigger
+        for _, triggers in cfg.x.trigger_matrix
+        for trigger in triggers
+    }
+
     # add processes we are interested in
     process_names = [
         # data
@@ -141,6 +181,33 @@ def add_podas_config(
         if isinstance(limit_dataset_files, int) and limit_dataset_files > 0:
             for info in dataset.info.values():
                 info.n_files = min(info.n_files, limit_dataset_files)
+
+        # add tags for trigger selection
+        if dataset_name.startswith("data_double_egamma_"):
+            dataset.add_tag("DoubleEG")
+        elif dataset_name.startswith("data_double_mu_"):
+            dataset.add_tag("DoubleMuon")
+        elif dataset_name.startswith("data_mu_egamma_"):
+            dataset.add_tag("MuonEG")
+        elif dataset_name.startswith("data_mu_"):
+            dataset.add_tag("SingleMuon")
+        elif dataset_name.startswith("data_e_"):
+            dataset.add_tag("SingleElectron")
+
+        # for each dataset, select which triggers to require
+        # (and which to veto to avoid double counting events
+        # in recorded data)
+        if dataset.is_data:
+            prev_triggers = set()
+            for tag, triggers in cfg.x.trigger_matrix:
+                if dataset.has_tag(tag):
+                    dataset.x.require_triggers = triggers
+                    dataset.x.veto_triggers = prev_triggers
+                    break
+                prev_triggers = prev_triggers | triggers
+
+        elif dataset.is_mc:
+            dataset.x.require_triggers = cfg.x.all_triggers
 
     # verify that the root process of all datasets is part of any of the registered processes
     verify_config_processes(cfg, warn=True)

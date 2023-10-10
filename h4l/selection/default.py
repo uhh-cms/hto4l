@@ -16,6 +16,7 @@ from columnflow.production.processes import process_ids
 from columnflow.util import maybe_import, dev_sandbox
 
 from h4l.selection.lepton import electron_selection, muon_selection
+from h4l.selection.trigger import trigger_selection
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -25,10 +26,12 @@ ak = maybe_import("awkward")
     uses={
         "event",
         attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        trigger_selection,
         pu_weight, murmuf_weights, increment_stats, process_ids, muon_selection,
     },
     produces={
         attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        trigger_selection,
         pu_weight, murmuf_weights, increment_stats, process_ids, muon_selection,
     },
     sandbox=dev_sandbox("bash::$CF_BASE/sandboxes/venv_columnar.sh"),
@@ -64,6 +67,10 @@ def default(
     if self.dataset_inst.is_data:
         events, json_filter_results = self[json_filter](events, **kwargs)
         results += json_filter_results
+
+    # run trigger selection
+    events, trigger_results = self[trigger_selection](events, call_force=True, **kwargs)
+    results += trigger_results
 
     # run electron selection
     events, ele_results = self[electron_selection](events, call_force=True, **kwargs)
