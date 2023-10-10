@@ -1,13 +1,9 @@
-import os
-import itertools
 import functools
 
-import yaml
-import law
 import order as od
 from scinum import Number
 
-from columnflow.util import DotDict, dev_sandbox
+from columnflow.util import DotDict
 from columnflow.config_util import (
     get_root_processes_from_campaign, add_shift_aliases, get_shifts_from_sources,
     verify_config_processes, add_category,
@@ -244,7 +240,6 @@ def add_podas_config(
             },
         }))
 
-
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
 
@@ -263,7 +258,7 @@ def add_podas_config(
             # columns added during selection
             "deterministic_seed", "process_id", "mc_weight", "cutflow.*",
             "channel_id", "category_ids", "mc_weight", "pdf_weight*", "murmuf_weight*",
-                "leptons_os", "single_triggered", "cross_triggered",
+            "leptons_os", "single_triggered", "cross_triggered",
             "pu_weight*",
         } | {
             # four momenta information
@@ -279,7 +274,6 @@ def add_podas_config(
         },
     })
 
-
     # names of electron correction sets and working points
     # (used in the electron_sf producer)
     cfg.x.electron_sf_names = ("UL-Electron-ID-SF", f"{year}{corr_postfix}", "wp80iso")
@@ -287,7 +281,6 @@ def add_podas_config(
     # names of muon correction sets and working points
     # (used in the muon producer)
     cfg.x.muon_sf_names = ("NUM_TightRelIso_DEN_TightIDandIPCut", f"{year}{corr_postfix}_UL")
-
 
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)

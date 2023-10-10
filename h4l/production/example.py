@@ -31,6 +31,8 @@ ak = maybe_import("awkward")
     },
 )
 def features(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """Basic features."""
+
     events = set_ak_column(events, "ht", ak.sum(events.Jet.pt, axis=1))
     events = set_ak_column(events, "n_jet", ak.num(events.Jet.pt, axis=1), value_type=np.int32)
 
@@ -55,6 +57,10 @@ def cutflow_features(
     object_masks: dict[str, dict[str, ak.Array]],
     **kwargs,
 ) -> ak.Array:
+    """
+    Features used when plotting cutflows.
+    """
+
     if self.dataset_inst.is_mc:
         events = self[mc_weight](events, **kwargs)
 
@@ -83,6 +89,10 @@ def cutflow_features(
     },
 )
 def example(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """
+    Example producer.
+    """
+
     # features
     events = self[features](events, **kwargs)
 

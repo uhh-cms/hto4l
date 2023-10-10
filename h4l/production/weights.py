@@ -9,7 +9,6 @@ from columnflow.production.cms.pileup import pu_weight
 from columnflow.util import maybe_import, safe_div, InsertableDict
 from columnflow.columnar_util import set_ak_column
 
-
 ak = maybe_import("awkward")
 np = maybe_import("numpy")
 

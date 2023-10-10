@@ -5,18 +5,11 @@ Configuration of the hto4l analysis.
 """
 
 import os
-import functools
 
 import law
 import order as od
-from scinum import Number
 
-from columnflow.util import DotDict, maybe_import
-from columnflow.columnar_util import EMPTY_FLOAT
-from columnflow.config_util import (
-    get_root_processes_from_campaign, add_shift_aliases, get_shifts_from_sources, add_category,
-    verify_config_processes,
-)
+from columnflow.util import maybe_import
 
 ak = maybe_import("awkward")
 

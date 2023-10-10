@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Exemplary selection methods.
+Example selection methods for categories.
 """
 
 from columnflow.categorization import Categorizer, categorizer
