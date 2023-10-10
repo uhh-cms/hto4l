@@ -67,11 +67,11 @@ def add_podas_config(
     verify_config_processes(cfg, warn=True)
 
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
-    cfg.x.default_calibrator = "example"
-    cfg.x.default_selector = "example"
-    cfg.x.default_producer = "example"
+    cfg.x.default_calibrator = "default"
+    cfg.x.default_selector = "default"
+    cfg.x.default_producer = "default"
     cfg.x.default_ml_model = None
-    cfg.x.default_inference_model = "example"
+    cfg.x.default_inference_model = None
     cfg.x.default_categories = ("incl",)
     cfg.x.default_variables = ("n_jet", "jet1_pt")
 
