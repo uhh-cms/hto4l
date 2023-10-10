@@ -22,12 +22,14 @@ ak = maybe_import("awkward")
 
 
 @selector(
-    uses={"event", attach_coffea_behavior, json_filter, mc_weight, electron_selection,
-          pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
-          },
-    produces={attach_coffea_behavior, json_filter, mc_weight, electron_selection,
-          pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
-          },
+    uses={
+        "event", attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
+    },
+    produces={
+        attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
+    },
     sandbox=dev_sandbox("bash::$CF_BASE/sandboxes/venv_columnar.sh"),
     exposed=True,
 )
