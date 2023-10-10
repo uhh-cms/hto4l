@@ -26,6 +26,7 @@ def add_podas_config(
 
     # gather campaign data
     year = campaign.x.year
+    year_short = year % 100
 
     corr_postfix = f"{campaign.x.vfp}VFP" if year == 2016 else ""
 
@@ -111,6 +112,33 @@ def add_podas_config(
         "lumi_13TeV_2017": 0.02j,
         "lumi_13TeV_1718": 0.006j,
         "lumi_13TeV_correlated": 0.009j,
+    })
+
+    # jec configuration
+    # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
+    jerc_postfix = "APV" if year == 2016 and campaign.x.vfp == "post" else ""
+    cfg.x.jec = DotDict.wrap({
+        "campaign": f"Summer19UL{year_short}{jerc_postfix}",
+        "version": {2016: "V7", 2017: "V5", 2018: "V5"}[year],
+        "jet_type": "AK4PFchs",
+        "levels": ["L1L2L3Res"],
+        "levels_for_type1_met": ["L1FastJet"],
+        "data_eras": sorted(filter(None, {
+            d.x("jec_era", None)
+            for d in cfg.datasets
+            if d.is_data
+        })),
+        "uncertainty_sources": [
+            "Total",
+        ],
+    })
+
+    # JER
+    # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution?rev=107
+    cfg.x.jer = DotDict.wrap({
+        "campaign": f"Summer19UL{year_short}{jerc_postfix}",
+        "version": "JR" + {2016: "V3", 2017: "V2", 2018: "V2"}[year],
+        "jet_type": "AK4PFchs",
     })
 
     # names of muon correction sets and working points
