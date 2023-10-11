@@ -2,8 +2,7 @@
 from __future__ import annotations
 
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.columnar_util import set_ak_column
-from columnflow.util import DotDict, maybe_import, dev_sandbox
+from columnflow.util import maybe_import, dev_sandbox
 from h4l.util import IF_NANO_V9, IF_NANO_V10
 
 np = maybe_import("numpy")
@@ -14,8 +13,10 @@ ak = maybe_import("awkward")
     uses=(
         {
             f"Electron.{var}"
-            for var in {"pt", "eta", "deltaEtaSC",
-                      "dxy", "dz", "sip3d"}
+            for var in {
+                "pt", "eta", "deltaEtaSC",
+                "dxy", "dz", "sip3d",
+            }
         } | {
             IF_NANO_V9("Electron.mvaFall17V2Iso"),
             IF_NANO_V10("Electron.mvaHZZIso"),
@@ -33,67 +34,67 @@ def electron_selection(
     pt = events.Electron.pt
     fSCeta = abs(events.Electron.eta + events.Electron.deltaEtaSC)
 
-    def return_cuts():
+    # era-dependent selection (filled below)
+    electron_base_mask = ak.ones_like(events.Electron.pt)
 
-        era = self.config_inst.campaign.x.year
-        if era == 2017 or era == 2018:
-            if self.config_inst.campaign.x.version < 10:
-                # Using 2017 WP and training (ElectronMVAEstimatorRun2Fall17IsoV2Values) since this is the only one available in Run2 UL nanoAODs. noqa
-                BDT = events.Electron.mvaFall17V2Iso
-            else:
-                BDT = events.Electron.mvaHZZIso
+    era = self.config_inst.campaign.x.year
+    if era == 2017 or era == 2018:
+        if self.config_inst.campaign.x.version < 10:
+            # using 2017 WP and training (ElectronMVAEstimatorRun2Fall17IsoV2Values)
+            # since this is the only one available in Run2 UL nanoAODs
+            BDT = events.Electron.mvaFall17V2Iso
+        else:
+            BDT = events.Electron.mvaHZZIso
 
-            # pre-UL WP for Run II (miniAOD branch: Run2_CutBased_BTag16)
-            if self.config_inst.campaign.x.preUL:  
-                # print("This is preUL!")
-                # from IPython import embed; embed()
-                return (
-                    (
-                        (pt <= 10.) & (
-                            (fSCeta < 0.8 & BDT > 0.85216885148) |
-                            (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.82684550976) |
-                            (fSCeta >= 1.479 & BDT > 0.86937630022)
-                        )
-                    ) |
-                    (
-                        (pt > 10.) & (
-                            (fSCeta < 0.8 & BDT > 0.98248928759) |
-                            (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.96919224579) |
-                            (fSCeta >= 1.479 & BDT > 0.79349796445))
+        # pre-UL WP for Run II (miniAOD branch: Run2_CutBased_BTag16)
+        if self.config_inst.campaign.x("preUL", False):
+            electron_base_mask = (
+                (
+                    (pt <= 10.) & (
+                        (fSCeta < 0.8 & BDT > 0.85216885148) |
+                        (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.82684550976) |
+                        (fSCeta >= 1.479 & BDT > 0.86937630022)
+                    )
+                ) |
+                (
+                    (pt > 10.) & (
+                        (fSCeta < 0.8 & BDT > 0.98248928759) |
+                        (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.96919224579) |
+                        (fSCeta >= 1.479 & BDT > 0.79349796445))
+                )
+            )
+
+        else:  # UL WP (miniAOD branch Run2_CutBased_UL)
+            electron_base_mask = (
+                (
+                    (pt <= 10.) & (
+                        ((fSCeta < 0.8) & (BDT > 0.9128577458)) |
+                        ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.9056792368)) |
+                        ((fSCeta >= 1.479) & (BDT > 0.9439440575))
+                    )
+                ) |
+                (
+                    (pt > 10.) & (
+                        ((fSCeta < 0.8) & (BDT > 0.1559788054)) |
+                        ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.0273863727)) |
+                        ((fSCeta >= 1.479) & (BDT > -0.5532483665))
                     )
                 )
+            )
 
-            else:  # UL WP (miniAOD branch Run2_CutBased_UL)
-                # print("This is not preUL!")
-                # from IPython import embed; embed()
-                return (
-                    (
-                        (pt <= 10.) & (
-                            ((fSCeta < 0.8) & (BDT > 0.9128577458)) |
-                            ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.9056792368)) |
-                            ((fSCeta >= 1.479) & (BDT > 0.9439440575))
-                        )
-                    ) |
-                    (
-                        (pt > 10.) & (
-                            ((fSCeta < 0.8) & (BDT > 0.1559788054)) |
-                            ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.0273863727)) |
-                            ((fSCeta >= 1.479) & (BDT > -0.5532483665))
-                        )
-                    )
-                )
-        return ak.ones_like(events.Electron.pt)
-    default_mask = (
+    # mask for selecting electrons
+    electron_mask = (
         (pt > min_pt) &
-        (abs(events.Electron.eta) < 2.5) & 
+        (abs(events.Electron.eta) < 2.5) &
         (events.Electron.dxy < 0.5) &
-        (events.Electron.dz < 1.0) & 
-        (abs(events.Electron.sip3d) < 4) & 
-        return_cuts()
+        (events.Electron.dz < 1.0) &
+        (abs(events.Electron.sip3d) < 4) &
+        electron_base_mask
     )
+
+    # select and sort electrons
     sorted_idx = ak.argsort(events.Electron.pt, axis=1, ascending=False)
-    # filter unselected electron indices
-    selected_electron_idx = sorted_idx[default_mask[sorted_idx]]
+    selected_electron_idx = sorted_idx[electron_mask[sorted_idx]]
 
     return events, SelectionResult(
         objects={
@@ -117,11 +118,11 @@ def electron_selection(
             "tightId", "mvaId", "highPtId", "isPFcand",
             # isolation
             "pfRelIso03_all",
-        ]}
-    ),
+        ]
+    }),
     exposed=False,
 )
-def muon_selector(
+def muon_selection(
     self: Selector,
     events: ak.Array,
     **kwargs,
@@ -130,7 +131,7 @@ def muon_selector(
     max_eta = 2.4
     selected_muon_mask = (
         # Global or Tracker Muon
-        (events.Muon.isGlobal or (events.Muon.isTracker & events.Muon.nStations > 0)) &
+        (events.Muon.isGlobal | (events.Muon.isTracker & events.Muon.nStations > 0)) &
         # Discard Standalone Muon tracks if reconstructed in muon system only
         (~events.Muon.isStandalone | (events.Muon.nTrackerLayers > 0)) &
         # WIP: Discard muons with muonBestTrackType==2 even if they are global or tracker muons # noqa
@@ -144,8 +145,10 @@ def muon_selector(
         (events.Muon.pfRelIso03_all < 0.35)
     )
     sorted_idx = ak.argsort(events.Muon.pt, axis=1, ascending=False)
+
     # filter unselected muon indices
     muon_idx = sorted_idx[selected_muon_mask[sorted_idx]]
+
     return events, SelectionResult(
         objects={
             "Muon": {

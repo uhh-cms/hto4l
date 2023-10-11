@@ -15,19 +15,25 @@ from columnflow.production.processes import process_ids
 
 from columnflow.util import maybe_import, dev_sandbox
 
-from h4l.selection.lepton import electron_selection, muon_selector
+from h4l.selection.lepton import electron_selection, muon_selection
+from h4l.selection.trigger import trigger_selection
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 
 
 @selector(
-    uses={"event", attach_coffea_behavior, json_filter, mc_weight, electron_selection,
-          pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
-          },
-    produces={attach_coffea_behavior, json_filter, mc_weight, electron_selection,
-          pu_weight, murmuf_weights, increment_stats, process_ids, muon_selector,
-          },
+    uses={
+        "event",
+        attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        trigger_selection,
+        pu_weight, murmuf_weights, increment_stats, process_ids, muon_selection,
+    },
+    produces={
+        attach_coffea_behavior, json_filter, mc_weight, electron_selection,
+        trigger_selection,
+        pu_weight, murmuf_weights, increment_stats, process_ids, muon_selection,
+    },
     sandbox=dev_sandbox("bash::$CF_BASE/sandboxes/venv_columnar.sh"),
     exposed=True,
 )
@@ -37,15 +43,8 @@ def default(
     stats: defaultdict,
     **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
-    # ensure coffea behavior
+    # ensure coffea behaviors are loaded
     events = self[attach_coffea_behavior](events, **kwargs)
-    results = SelectionResult()
-    results.steps.all = ak.full_like(events.event, True)
-
-    # filter bad data events according to golden lumi mask
-    if self.dataset_inst.is_data:
-        events, json_filter_results = self[json_filter](events, **kwargs)
-        results += json_filter_results
 
     # add corrected mc weights
     if self.dataset_inst.is_mc:
@@ -61,24 +60,46 @@ def default(
         # pileup weights
         events = self[pu_weight](events, **kwargs)
 
+    # initialize `SelectionResult` object
+    results = SelectionResult()
+
+    # filter bad data events according to golden lumi mask
+    if self.dataset_inst.is_data:
+        events, json_filter_results = self[json_filter](events, **kwargs)
+        results += json_filter_results
+
+    # run trigger selection
+    events, trigger_results = self[trigger_selection](events, call_force=True, **kwargs)
+    results += trigger_results
+
+    # run electron selection
     events, ele_results = self[electron_selection](events, call_force=True, **kwargs)
     results += ele_results
 
-    events, muon_results = self[muon_selector](events, call_force=True, **kwargs)
+    # run muon selection
+    events, muon_results = self[muon_selection](events, call_force=True, **kwargs)
     results += muon_results
 
+    # get indices of selected leptons
     ele_idx = results.objects.Electron.Electron
     muon_idx = results.objects.Muon.Muon
 
+    # count selected leptons
     n_ele = ak.num(events.Electron[ele_idx], axis=1)
     n_muon = ak.num(events.Muon[muon_idx], axis=1)
+
+    # select events with at least four selected leptons
     results.steps["four_leptons"] = (n_ele + n_muon) >= 4
+
+    # final event selection mask is AND of all selection steps
     event_sel = reduce(and_, results.steps.values())
     results.main["event"] = event_sel
+
+    # write out process IDs
     events = self[process_ids](events, **kwargs)
 
-
-    # increment stats
+    # keep track of event counts, sum of weights
+    # in several categories
     weight_map = {
         "num_events": Ellipsis,
         "num_events_selected": event_sel,
@@ -95,7 +116,7 @@ def default(
         for v in ["", "_up", "_down"]:
             weight_map[f"sum_murmuf_weight{v}"] = events[f"murmuf_weight{v}"]
             weight_map[f"sum_murmuf_weight{v}_selected"] = (events[f"murmuf_weight{v}"], event_sel)
-        
+
         # groups
         group_map = {
             **group_map,
@@ -112,6 +133,8 @@ def default(
         }
         # combinations
         group_combinations.append(("process",))
+
+    # increment counts/weight sums
     events, results = self[increment_stats](
         events,
         results,

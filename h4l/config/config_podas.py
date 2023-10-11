@@ -1,13 +1,9 @@
-import os
-import itertools
 import functools
 
-import yaml
-import law
 import order as od
 from scinum import Number
 
-from columnflow.util import DotDict, dev_sandbox
+from columnflow.util import DotDict
 from columnflow.config_util import (
     get_root_processes_from_campaign, add_shift_aliases, get_shifts_from_sources,
     verify_config_processes, add_category,
@@ -30,29 +26,152 @@ def add_podas_config(
 
     # gather campaign data
     year = campaign.x.year
+    year_short = year % 100
 
     corr_postfix = f"{campaign.x.vfp}VFP" if year == 2016 else ""
 
+    # triggers required, sorted by primary dataset tag for recorded data
+    cfg.x.trigger_matrix = [
+        (
+            "DoubleEG", {
+                "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL",
+                "DoubleEle25_CaloIdL_MW",
+            },
+        ),
+        (
+            "DoubleMuon", {
+                "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8",
+            },
+        ),
+        (
+            "MuonEG", {
+                "Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL",
+                "Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                "Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                "DiMu9_Ele9_CaloIdL_TrackIdL_DZ",
+            },
+        ),
+        (
+            "SingleElectron", {
+                "Ele32_WPTight_Gsf",
+            },
+        ),
+        (
+            "SingleMuon", {
+                "IsoMu24",
+            },
+        ),
+    ]
+
+    # union of all triggers for use in MC
+    cfg.x.all_triggers = {
+        trigger
+        for _, triggers in cfg.x.trigger_matrix
+        for trigger in triggers
+    }
+
     # add processes we are interested in
     process_names = [
-        "data_mu",
-        "h_ggf_4l",
+        # data
+        "data",
+        # signals
+        "h",
+        "h_ggf_4l",  # GluGluHToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "h_vbf_4l",  # VBF_HToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "wph_4l",  # WplusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "wmh_4l",  # WminusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "zh_4l",  # ZH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2-minlo-HZJ_JHUGenV7011_pythia8
+        "tth_4l",  # ttH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "bbh_4l",  # bbH_HToZZTo4L_M125_TuneCP2_13TeV-jhugenv7011-pythia8
+        "thq_4l",  # tqH_HToZZTo4L_M125_TuneCP5_13TeV-jhugenv7011-pythia8
+        # backgrounds
+        "zz_llll",  # ZZTo4L_TuneCP5_13TeV_powheg_pythia8
+        "ggf",  # GluGluToContinToZZTo*_TuneCP5_13TeV-mcfm701-pythia8
+        # TODO: dy, wz, tt
     ]
+
+    # configuration of colors, labels, etc. can happen here
+    process_styles = {
+        # data
+        "data": {
+            "color1": "#000000",
+            "label": r"Data",
+        },
+        # signals
+        "h": {
+            "color1": "#ff9999",
+            "color2": "#555555",
+            "label": r"H(125)",
+        },
+        # backgrounds
+        "zz_llll": {
+            "color1": "#99ccff",
+            "color2": "#555555",
+            "label": r"$q\overline{q}\rightarrow{ZZ}$, Z$\gamma^{*}$",
+        },
+        "ggf": {
+            "color1": "#4b78ff",
+            "color2": "#555555",
+            "label": r"${gg}\rightarrow{ZZ}$, Z$\gamma^{*}$",
+        },
+        # TODO: dy, wz, tt (color: #669966, label: Z+X)
+    }
+
     for process_name in process_names:
         # add the process
         proc = cfg.add_process(procs.get(process_name))
 
-        # configuration of colors, labels, etc. can happen here
-        if proc.is_mc:
-            proc.color1 = (244, 182, 66) if proc.name == "tt" else (244, 93, 66)
+        # set style of some processes
+        for attr in ("color1", "color2", "label"):
+            val = process_styles.get(proc.name, {}).get(attr, None)
+            if val is not None:
+                setattr(proc, attr, val)
 
     # add datasets we need to study
     dataset_names = [
         # data
-        "data_mu_a",
-        # backgrounds
+        "data_e_b",
+        "data_e_c",
+        "data_e_d",
+        "data_e_e",
+        "data_e_f",
+        "data_double_egamma_b",
+        "data_double_egamma_c",
+        "data_double_egamma_d",
+        "data_double_egamma_e",
+        "data_double_egamma_f",
+        "data_mu_b",
+        "data_mu_c",
+        "data_mu_d",
+        "data_mu_e",
+        "data_mu_f",
+        "data_double_mu_b",
+        "data_double_mu_c",
+        "data_double_mu_d",
+        "data_double_mu_e",
+        "data_double_mu_f",
+        "data_mu_egamma_b",
+        "data_mu_egamma_c",
+        "data_mu_egamma_d",
+        "data_mu_egamma_e",
+        "data_mu_egamma_f",
         # signals
-        "h_ggf_4l_powheg",
+        "h_ggf_4l_powheg",  # GluGluHToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "h_vbf_4l_powheg",  # VBF_HToZZTo4L_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "wph_4l_powheg",  # WplusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "wmh_4l_powheg",  # WminusH_HToZZTo4L_M125_TuneCP5_13TeV_powheg2-minlo-HWJ_JHUGenV7011_pythia8
+        "zh_4l_powheg",  # ZH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2-minlo-HZJ_JHUGenV7011_pythia8
+        "tth_4l_powheg",  # ttH_HToZZ_4LFilter_M125_TuneCP5_13TeV_powheg2_JHUGenV7011_pythia8
+        "bbh_4l_powheg",  # bbH_HToZZTo4L_M125_TuneCP2_13TeV-jhugenv7011-pythia8
+        "thq_4l_powheg",  # tqH_HToZZTo4L_M125_TuneCP5_13TeV-jhugenv7011-pythia8
+        # backgrounds
+        "zz_llll_powheg",  # ZZTo4L_TuneCP5_13TeV_powheg_pythia8
+        "ggf_4e_mcfm",  # GluGluToContinToZZTo4e_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_4mu_mcfm",  # GluGluToContinToZZTo4mu_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_4tau_mcfm",  # GluGluToContinToZZTo4tau_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2e2mu_mcfm",  # GluGluToContinToZZTo2e2mu_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2e2tau_mcfm",  # GluGluToContinToZZTo2e2tau_TuneCP5_13TeV-mcfm701-pythia8
+        "ggf_2mu2tau_mcfm",  # GluGluToContinToZZTo2mu2tau_TuneCP5_13TeV-mcfm701-pythia8
     ]
     for dataset_name in dataset_names:
         # add the dataset
@@ -63,15 +182,42 @@ def add_podas_config(
             for info in dataset.info.values():
                 info.n_files = min(info.n_files, limit_dataset_files)
 
+        # add tags for trigger selection
+        if dataset_name.startswith("data_double_egamma_"):
+            dataset.add_tag("DoubleEG")
+        elif dataset_name.startswith("data_double_mu_"):
+            dataset.add_tag("DoubleMuon")
+        elif dataset_name.startswith("data_mu_egamma_"):
+            dataset.add_tag("MuonEG")
+        elif dataset_name.startswith("data_mu_"):
+            dataset.add_tag("SingleMuon")
+        elif dataset_name.startswith("data_e_"):
+            dataset.add_tag("SingleElectron")
+
+        # for each dataset, select which triggers to require
+        # (and which to veto to avoid double counting events
+        # in recorded data)
+        if dataset.is_data:
+            prev_triggers = set()
+            for tag, triggers in cfg.x.trigger_matrix:
+                if dataset.has_tag(tag):
+                    dataset.x.require_triggers = triggers
+                    dataset.x.veto_triggers = prev_triggers
+                    break
+                prev_triggers = prev_triggers | triggers
+
+        elif dataset.is_mc:
+            dataset.x.require_triggers = cfg.x.all_triggers
+
     # verify that the root process of all datasets is part of any of the registered processes
     verify_config_processes(cfg, warn=True)
 
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
-    cfg.x.default_calibrator = "example"
-    cfg.x.default_selector = "example"
-    cfg.x.default_producer = "example"
+    cfg.x.default_calibrator = "default"
+    cfg.x.default_selector = "default"
+    cfg.x.default_producer = "default"
     cfg.x.default_ml_model = None
-    cfg.x.default_inference_model = "example"
+    cfg.x.default_inference_model = None
     cfg.x.default_categories = ("incl",)
     cfg.x.default_variables = ("n_jet", "jet1_pt")
 
@@ -115,6 +261,33 @@ def add_podas_config(
         "lumi_13TeV_2017": 0.02j,
         "lumi_13TeV_1718": 0.006j,
         "lumi_13TeV_correlated": 0.009j,
+    })
+
+    # jec configuration
+    # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
+    jerc_postfix = "APV" if year == 2016 and campaign.x.vfp == "post" else ""
+    cfg.x.jec = DotDict.wrap({
+        "campaign": f"Summer19UL{year_short}{jerc_postfix}",
+        "version": {2016: "V7", 2017: "V5", 2018: "V5"}[year],
+        "jet_type": "AK4PFchs",
+        "levels": ["L1L2L3Res"],
+        "levels_for_type1_met": ["L1FastJet"],
+        "data_eras": sorted(filter(None, {
+            d.x("jec_era", None)
+            for d in cfg.datasets
+            if d.is_data
+        })),
+        "uncertainty_sources": [
+            "Total",
+        ],
+    })
+
+    # JER
+    # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution?rev=107
+    cfg.x.jer = DotDict.wrap({
+        "campaign": f"Summer19UL{year_short}{jerc_postfix}",
+        "version": "JR" + {2016: "V3", 2017: "V2", 2018: "V2"}[year],
+        "jet_type": "AK4PFchs",
     })
 
     # names of muon correction sets and working points
@@ -244,7 +417,6 @@ def add_podas_config(
             },
         }))
 
-
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
 
@@ -263,7 +435,7 @@ def add_podas_config(
             # columns added during selection
             "deterministic_seed", "process_id", "mc_weight", "cutflow.*",
             "channel_id", "category_ids", "mc_weight", "pdf_weight*", "murmuf_weight*",
-                "leptons_os", "single_triggered", "cross_triggered",
+            "leptons_os", "single_triggered", "cross_triggered",
             "pu_weight*",
         } | {
             # four momenta information
@@ -279,7 +451,6 @@ def add_podas_config(
         },
     })
 
-
     # names of electron correction sets and working points
     # (used in the electron_sf producer)
     cfg.x.electron_sf_names = ("UL-Electron-ID-SF", f"{year}{corr_postfix}", "wp80iso")
@@ -287,7 +458,6 @@ def add_podas_config(
     # names of muon correction sets and working points
     # (used in the muon producer)
     cfg.x.muon_sf_names = ("NUM_TightRelIso_DEN_TightIDandIPCut", f"{year}{corr_postfix}_UL")
-
 
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
@@ -308,20 +478,13 @@ def add_podas_config(
     # (just one for now)
     cfg.add_channel(name="4mu", id=1)
 
-
     # add categories using the "add_category" tool which adds auto-generated ids
-    # the "selection" entries refer to names of selectors, e.g. in selection/example.py
+    # the "selection" entries refer to names of categorizers, e.g. in categorization/default.py
     add_category(
         cfg,
         name="incl",
         selection="cat_incl",
         label="inclusive",
-    )
-    add_category(
-        cfg,
-        name="2j",
-        selection="cat_2j",
-        label="2 jets",
     )
 
     from h4l.config.variables import add_variables

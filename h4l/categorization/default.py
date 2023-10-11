@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Example categorizers.
+Example selection methods for categories.
 """
 
 from columnflow.categorization import Categorizer, categorizer
@@ -19,9 +19,3 @@ ak = maybe_import("awkward")
 def cat_incl(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     # fully inclusive selection
     return events, ak.ones_like(events.event) == 1
-
-
-@categorizer(uses={"Jet.pt"})
-def cat_2j(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
-    # two or more jets
-    return events, ak.num(events.Jet.pt, axis=1) >= 2
