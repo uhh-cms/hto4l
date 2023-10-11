@@ -9,15 +9,15 @@ from columnflow.columnar_util import set_ak_column
 from columnflow.production.cms.mc_weight import mc_weight
 
 
-from h4l.calibration.fsr_photon_correction import electron_fsr_photon_calibrator
+from h4l.calibration.fsr_photon_correction import fsr_photon_calibrator
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 
 
 @calibrator(
-    uses={electron_fsr_photon_calibrator, mc_weight, deterministic_seeds},
-    produces={electron_fsr_photon_calibrator, mc_weight, deterministic_seeds},
+    uses={fsr_photon_calibrator, mc_weight, deterministic_seeds},
+    produces={fsr_photon_calibrator, mc_weight, deterministic_seeds},
     exposed=True,
 )
 def default(
@@ -30,5 +30,5 @@ def default(
 
     events = self[deterministic_seeds](events, **kwargs)
 
-    events = self[electron_fsr_photon_calibrator](events, **kwargs)
+    events = self[fsr_photon_calibrator](events, **kwargs)
     return events
