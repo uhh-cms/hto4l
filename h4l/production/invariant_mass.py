@@ -40,25 +40,33 @@ def four_lep_invariant_mass(self: Producer, events: ak.Array, **kwargs) -> ak.Ar
         **kwargs,
     )
 
-    # pad the lepton arrays with `None` entries
-    # to ensure they have at least length 2
-    electron = ak.pad_none(events.Electron, 2, axis=1)
-    muon = ak.pad_none(events.Muon, 2, axis=1)
-
-    # sum over first two elements of each collection
-    # (`None` entries propagate)
-    dielectron = electron[:, :2].sum(axis=1)
-    dimuon = muon[:, :2].sum(axis=1)
+    # four-vector sum of first four elements of each
+    # lepton collection (possibly fewer)
+    dielectron = events.Electron[:, :4].sum(axis=1)
+    dimuon = events.Muon[:, :4].sum(axis=1)
 
     # sum the results to form the four-lepton four-vector
     fourlep = dielectron + dimuon
 
+    # total number of leptons per event
+    n_leptons = (
+        ak.num(events.Electron, axis=1) +
+        ak.num(events.Muon, axis=1)
+    )
+
+    # four-lepton mass, taking into account only events with at least four leptons,
+    # and otherwise substituting a predefined EMPTY_FLOAT value
+    fourlep_mass = ak.where(
+        n_leptons >= 4,
+        fourlep.mass,
+        EMPTY_FLOAT,
+    )
+
     # write out the resulting mass to the `events` array,
-    # replacing `None` values with a predefined EMPTY_FLOAT value
     events = set_ak_column_f32(
         events,
         "m4l",
-        ak.fill_none(fourlep.mass, EMPTY_FLOAT),
+        fourlep_mass,
     )
 
     # return the events
