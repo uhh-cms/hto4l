@@ -48,45 +48,22 @@ def electron_selection(
             else:
                 BDT = events.Electron.mvaHZZIso
 
-            # pre-UL WP for Run II (miniAOD branch: Run2_CutBased_BTag16)
-            if self.config_inst.campaign.x.preUL:
-                # print("This is preUL!")
-                # from IPython import embed; embed()
-                return (
-                    (
-                        (pt <= 10.) & (
-                            (fSCeta < 0.8 & BDT > 0.85216885148) |
-                            (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.82684550976) |
-                            (fSCeta >= 1.479 & BDT > 0.86937630022)
-                        )
-                    ) |
-                    (
-                        (pt > 10.) & (
-                            (fSCeta < 0.8 & BDT > 0.98248928759) |
-                            (fSCeta >= 0.8 & fSCeta < 1.479 & BDT > 0.96919224579) |
-                            (fSCeta >= 1.479 & BDT > 0.79349796445))
+            return (
+                (
+                    (pt <= 10.) & (
+                        ((fSCeta < 0.8) & (BDT > 0.9128577458)) |
+                        ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.9056792368)) |
+                        ((fSCeta >= 1.479) & (BDT > 0.9439440575))
+                    )
+                ) |
+                (
+                    (pt > 10.) & (
+                        ((fSCeta < 0.8) & (BDT > 0.1559788054)) |
+                        ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.0273863727)) |
+                        ((fSCeta >= 1.479) & (BDT > -0.5532483665))
                     )
                 )
-
-            else:  # UL WP (miniAOD branch Run2_CutBased_UL)
-                # print("This is not preUL!")
-                # from IPython import embed; embed()
-                return (
-                    (
-                        (pt <= 10.) & (
-                            ((fSCeta < 0.8) & (BDT > 0.9128577458)) |
-                            ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.9056792368)) |
-                            ((fSCeta >= 1.479) & (BDT > 0.9439440575))
-                        )
-                    ) |
-                    (
-                        (pt > 10.) & (
-                            ((fSCeta < 0.8) & (BDT > 0.1559788054)) |
-                            ((fSCeta >= 0.8) & (fSCeta < 1.479) & (BDT > 0.0273863727)) |
-                            ((fSCeta >= 1.479) & (BDT > -0.5532483665))
-                        )
-                    )
-                )
+            )
         return ak.ones_like(events.Electron.pt)
     default_mask = (
         (pt > min_pt) &
@@ -103,7 +80,7 @@ def electron_selection(
     sorted_idx = ak.argsort(events.Electron.pt, axis=1, ascending=False)
     # filter unselected electron indices
     selected_electron_idx = sorted_idx[default_mask[sorted_idx]]
-
+    # from IPython import embed; embed()
     return events, SelectionResult(
         objects={
             "Electron": {
@@ -139,7 +116,7 @@ def muon_selector(
     working_point: str = "tight",
     **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
-    events = self[attach_coffea_behavior](events, collections=["Electron"],)
+    events = self[attach_coffea_behavior](events, collections=["Muon"])
     min_pt = self.config_inst.x.muon_thresholds.pt[working_point]
     max_eta = 2.4
     selected_muon_mask = (

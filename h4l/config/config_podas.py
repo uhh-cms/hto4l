@@ -35,7 +35,7 @@ def add_podas_config(
 
     # add processes we are interested in
     process_names = [
-        "data_mu",
+        # "data_mu",
         "h_ggf_4l",
     ]
     for process_name in process_names:
@@ -49,7 +49,7 @@ def add_podas_config(
     # add datasets we need to study
     dataset_names = [
         # data
-        "data_mu_a",
+        # "data_mu_a",
         # backgrounds
         # signals
         "h_ggf_4l_powheg",
@@ -273,6 +273,10 @@ def add_podas_config(
             # four momenta information
             f"{field}.{var}"
             for field in ["Jet", "Muon", "Electron"]
+            for var in ["pt", "eta", "phi", "mass", "e"]
+        } | {
+            f"{field}.fsr_uncorrected_{var}"
+            for field in ["Muon", "Electron"]
             for var in ["pt", "eta", "phi", "mass", "e"]
         },
         "cf.MergeSelectionMasks": {

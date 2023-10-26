@@ -63,7 +63,6 @@ def default(
 
     events, ele_results = self[electron_selection](events, call_force=True, **kwargs)
     results += ele_results
-
     events, muon_results = self[muon_selector](events, call_force=True, **kwargs)
     results += muon_results
 
@@ -74,9 +73,10 @@ def default(
     n_muon = ak.num(events.Muon[muon_idx], axis=1)
     results.steps["four_leptons"] = (n_ele + n_muon) >= 4
     event_sel = reduce(and_, results.steps.values())
-    results.main["event"] = event_sel
-    events = self[process_ids](events, **kwargs)
+    results.event = event_sel
 
+    # from IPython import embed; embed()
+    events = self[process_ids](events, **kwargs)
 
     # increment stats
     weight_map = {
@@ -95,7 +95,7 @@ def default(
         for v in ["", "_up", "_down"]:
             weight_map[f"sum_murmuf_weight{v}"] = events[f"murmuf_weight{v}"]
             weight_map[f"sum_murmuf_weight{v}_selected"] = (events[f"murmuf_weight{v}"], event_sel)
-        
+
         # groups
         group_map = {
             **group_map,
@@ -121,5 +121,8 @@ def default(
         group_combinations=group_combinations,
         **kwargs,
     )
+
+    from IPython import embed
+    embed()
 
     return events, results

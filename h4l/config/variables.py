@@ -51,6 +51,13 @@ def add_variables(cfg):
         x_title=r"$p_{T} of all \mu$",
     )
     cfg.add_variable(
+        name="uncorrected_muon_pt",
+        expression="Muon.fsr_uncorrected_pt",
+        binning=(40, 0.0, 400.0),
+        unit="GeV",
+        x_title=r"Uncorrected $p_{T} of all \mu$",
+    )
+    cfg.add_variable(
         name="jet1_pt",
         expression="Jet.pt[:,0]",
         null_value=EMPTY_FLOAT,
@@ -78,6 +85,13 @@ def add_variables(cfg):
         binning=(40, 0.0, 400.0),
         unit="GeV",
         x_title=r"$p_{T} of all e$",
+    )
+    cfg.add_variable(
+        name="uncorrected_electron_pt",
+        expression="Electron.fsr_uncorrected_pt",
+        binning=(40, 0.0, 400.0),
+        unit="GeV",
+        x_title=r"$Uncorrected p_{T} of all e$",
     )
 
     cfg.add_variable(
