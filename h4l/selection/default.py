@@ -73,7 +73,7 @@ def default(
     n_muon = ak.num(events.Muon[muon_idx], axis=1)
     results.steps["four_leptons"] = (n_ele + n_muon) >= 4
     event_sel = reduce(and_, results.steps.values())
-    results.event = event_sel
+    results.main.event = event_sel
 
     # from IPython import embed; embed()
     events = self[process_ids](events, **kwargs)
@@ -122,6 +122,7 @@ def default(
         **kwargs,
     )
 
+    print("In default selection!")
     from IPython import embed
     embed()
 
